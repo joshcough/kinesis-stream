@@ -1,8 +1,5 @@
 package com.localytics.kinesis
 
-import java.nio.ByteBuffer
-
-import com.amazonaws.kinesis.producer.{KinesisProducer, UserRecordResult}
 import com.google.common.util.concurrent.{
   FutureCallback, Futures, MoreExecutors, ListenableFuture
 }
@@ -13,7 +10,8 @@ import scalaz.stream._
 import scalaz.syntax.either._
 
 /**
- * Just the companion object for Writer.
+ * scalaz-stream extension providing functionality for
+ * handling operations that return ListenableFutures
  */
 object Writer {
 
@@ -26,6 +24,24 @@ object Writer {
     MoreExecutors.listeningDecorator(es).submit(new Callable[O] {
       def call: O = f(i)
     })
+
+  /**
+   * Run the input through the writers synchProcess
+   * @param is
+   * @param e
+   */
+  def writeSynch[I,O](is: Seq[I], writer: Writer[I,O])
+                     (implicit e: ExecutorService): Unit =
+    writer.synchProcess(is).run.run
+
+
+  /**
+   * Run the input through asynchProcess.
+   * @param is
+   */
+  def writeAsynch[I,O](is: Seq[I], writer: Writer[I,O])
+                      (implicit e: ExecutorService): Unit =
+    writer.asynchProcess(is).run.run
 }
 
 /**
@@ -54,14 +70,6 @@ trait Writer[I,O] { self =>
    * @param result
    */
   def onSuccess(result: O): Unit
-
-  /**
-   * Run the input through synchProcess
-   * @param is
-   * @param e
-   */
-  def writeSynch(is: Seq[I])(implicit e: ExecutorService): Unit =
-    synchProcess(is).run.run
 
   /**
    * An Process running in Task, producing Os from Is.
@@ -94,13 +102,6 @@ trait Writer[I,O] { self =>
     }, e)
     Task(fo.get)
   })
-
-  /**
-   * Run the input through asynchProcess.
-   * @param is
-   */
-  def writeAsynch(is: Seq[I])(implicit e: ExecutorService): Unit =
-    asynchProcess(is).run.run
 
   /**
    * Given some Is, return an 'asynchronous' Process producing Os.
@@ -144,37 +145,4 @@ trait Writer[I,O] { self =>
       }, e)
     }
   })
-}
-
-/**
- *
- */
-trait KinesisWriter[I] extends Writer[I, UserRecordResult] {
-
-  type StreamName = String
-  type PartitionKey = String
-
-  /**
-   *
-   */
-  val kinesisProducer: KinesisProducer
-
-  /**
-   * Turn the input into the 3 values Kinesis needs:
-   *   Stream name, Partition Key, and ByteBuffer (the payload)
-   * @param i
-   * @return
-   */
-  def toKinesisUserRecord(i:I): (StreamName, PartitionKey, ByteBuffer)
-
-  /**
-   * Actually run the input on Kinesis by first converting it to
-   * the 3 values that Kinesis needs, and then calling Kinesis.
-   * @param i
-   * @return
-   */
-  def eval(i:I): ListenableFuture[UserRecordResult] = {
-    val (streamName, partitionKey, payload) = toKinesisUserRecord(i)
-    kinesisProducer.addUserRecord(streamName, partitionKey, payload)
-  }
 }

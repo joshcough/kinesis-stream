@@ -6,6 +6,8 @@ organization := "com.localytics"
 
 scalaVersion := "2.11.7"
 
+crossScalaVersions := Seq("2.9.3", "2.10.5", "2.11.7")
+
 scalacOptions ++= Seq(
   "-deprecation",
   "-encoding", "UTF-8", // yes, this is 2 args
@@ -35,9 +37,11 @@ resolvers ++= Seq(
 )
 
 libraryDependencies ++= Seq(
-  "org.scalaz" %% "scalaz-core" % "7.1.0",
-  "org.scalacheck" %% "scalacheck" % "1.11.6" % "test",
-  "com.amazonaws" % "amazon-kinesis-producer" % "0.9.0",
-  "org.scalaz.stream" %% "scalaz-stream" % "0.7.1a"
+  "org.scalaz"        %% "scalaz-core"             % "7.1.0",
+  "com.amazonaws"      % "amazon-kinesis-producer" % "0.9.0",
+  "org.scalaz.stream" %% "scalaz-stream"           % "0.7.1a",
+  "org.scalacheck"    %% "scalacheck"              % "1.11.6"  % "test",
+  "org.mockito"        % "mockito-all"             % "1.9.5"   % "test",
+  "org.scalatest"     %% "scalatest"               % "2.2.4"   % "test"
 )
 
