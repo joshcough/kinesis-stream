@@ -1,24 +1,29 @@
-# kinesis-stream
+package com.localytics.kinesis
 
-kinesis-stream is a scalaz-stream API for Amazon Kinesis.
+import java.nio.ByteBuffer
+import java.util.concurrent.Executor
 
-kinesis-stream currently supports the KPL, but hopefully
-will soon support the KCL, and maybe the original AWS API as well.
+import com.amazonaws.kinesis.producer.{UserRecordResult, KinesisProducer}
+import com.google.common.util.concurrent.MoreExecutors
 
-The following simple example writes Strings to Kinesis:
+import scalaz.concurrent.Task
+import scalaz.stream._
 
-```scala
+/**
+ * Created by jcough on 7/19/15.
+ */
+object log {
+  def OMGOMG_!(s:String): Unit = ()
+  def AWESOME(s:String): Unit = ()
+}
+
+// write a bunch of Strings to kinesis.
 object GettingStarted {
   val kp = new KinesisProducer()
   val writer = KinesisWriter.noopWriter[String](kp, "my-stream", s => s)(_.getBytes)
-  Writer.writeAsync(List("Hello", ", ", "World", "!!!"), writer)
+  Writer.writeAsync(List("Hello", ", ", "World", "!!!"), writer)(MoreExecutors.directExecutor())
 }
-```
 
-Here is a slightly more involved example that starts
-hinting at some of the API. It also just writes out Strings.
-
-```scala
 object BetterExample {
   val kw = new KinesisWriter[String] {
     val kinesisProducer: KinesisProducer = new KinesisProducer()
@@ -32,15 +37,10 @@ object BetterExample {
 
   implicit val e: Executor = MoreExecutors.directExecutor()
 
+  // write a bunch of Strings to kinesis.
   Writer.writeAsync(List("Hello", ", ", "World", "!!!"), kw)
 }
-```
 
-Here is a larger example that breaks things down a little more.
-Other than the logger, this code compiles. You can find it in
-src/main/scala/com/localytics/kinesis/Example.scala
-
-```scala
 object DeepDive {
 
   // create a Kinesis writer
@@ -87,6 +87,5 @@ object DeepDive {
   // at this point you can get all sorts of info from the
   // UserResultRecords, such as shard id, sequence number, and more
   // but for now, we'll just return them
-  results
+  // results
 }
-```

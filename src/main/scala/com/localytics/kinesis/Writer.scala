@@ -1,9 +1,9 @@
 package com.localytics.kinesis
 
 import com.google.common.util.concurrent.{
-  FutureCallback, Futures, MoreExecutors, ListenableFuture
+  FutureCallback, Futures, MoreExecutors => M, ListenableFuture
 }
-import java.util.concurrent.{ExecutorService, Callable}
+import java.util.concurrent.{Executor, ExecutorService, Callable}
 import scalaz.\/
 import scalaz.concurrent.Task
 import scalaz.stream._
@@ -19,29 +19,28 @@ object Writer {
    * Build a future that will run the computation (f)
    * on the input (i) on the executor service (es)
    */
-  def executorChannel[I,O](i: I)(f: I => O)
-                          (implicit es: ExecutorService): ListenableFuture[O] =
-    MoreExecutors.listeningDecorator(es).submit(new Callable[O] {
-      def call: O = f(i)
-    })
+  def executorChannel[I,O](i: I, es: ExecutorService)
+                          (f: I => O): ListenableFuture[O] =
+    M.listeningDecorator(es).submit(new Callable[O] { def call: O = f(i) })
 
   /**
-   * Run the input through the writers synchProcess
+   * Run the input through the writers syncProcess, \
+   * discarding the results.
    * @param is
    * @param e
    */
-  def writeSynch[I,O](is: Seq[I], writer: Writer[I,O])
-                     (implicit e: ExecutorService): Unit =
-    writer.synchProcess(is).run.run
-
+  def writeSync[I,O](is: Seq[I], writer: Writer[I,O])
+                     (implicit e: Executor): Unit =
+    writer.syncProcess(is).run.run
 
   /**
-   * Run the input through asynchProcess.
+   * Run the input through the writers asyncProcess,
+   * discarding the results.
    * @param is
    */
-  def writeAsynch[I,O](is: Seq[I], writer: Writer[I,O])
-                      (implicit e: ExecutorService): Unit =
-    writer.asynchProcess(is).run.run
+  def writeAsync[I,O](is: Seq[I], writer: Writer[I,O])
+                      (implicit e: Executor): Unit =
+    writer.asyncProcess(is).run.run
 }
 
 /**
@@ -77,24 +76,23 @@ trait Writer[I,O] { self =>
    * @param is
    * @return
    */
-  def synchProcess(is: Seq[I])(implicit e: ExecutorService): Process[Task, O] =
-    mkProcess(is, synchChannel)
+  def asyncProcess(is: Seq[I])(implicit e: Executor): Process[Task, O] =
+    mkProcess(is, syncChannel)
 
   /**
-   * An Channel running in Task, producing Os from Is.
+   * A Channel running in Task, producing Os from Is.
    * The tasks always wait for operations to complete.
    * @return
    */
-  def synchChannel(implicit e: ExecutorService): Channel[Task, I, O] =
-    channel.lift(synchTask)
+  def syncChannel(implicit e: Executor): Channel[Task, I, O] =
+    channel.lift(syncTask)
 
   /**
-   * Given some Is, return an 'synchronous' Process producing Os.
-   * See synchChannel and synchTask for details.
+   * Given some Is, return an 'synchronous' Task producing Os.
    * @param i
    * @return
    */
-  def synchTask(i: I)(implicit e: ExecutorService): Task[O] = Task.suspend({
+  def syncTask(i: I)(implicit e: Executor): Task[O] = Task.suspend({
     val fo = eval(i)
     Futures.addCallback(fo, new FutureCallback[O]() {
       def onSuccess(result: O) = self.onSuccess(result)
@@ -105,15 +103,15 @@ trait Writer[I,O] { self =>
 
   /**
    * Given some Is, return an 'asynchronous' Process producing Os.
-   * See asynchChannel and asynchTask for details.
+   * See asyncChannel and asyncTask for details.
    * @param is
    * @return
    */
-  def asynchProcess(is: Seq[I])(implicit e: ExecutorService): Process[Task, O] =
-    mkProcess(is, asynchChannel)
+  def syncProcess(is: Seq[I])(implicit e: Executor): Process[Task, O] =
+    mkProcess(is, asyncChannel)
 
   private def mkProcess(is:Seq[I], channel: Channel[Task, I, O])
-                       (implicit e: ExecutorService): Process[Task, O] =
+                       (implicit e: Executor): Process[Task, O] =
     Process(is:_*).tee(channel)(tee.zipApply).eval
 
   /**
@@ -121,8 +119,8 @@ trait Writer[I,O] { self =>
    * The tasks don't wait for operations to complete.
    * @return
    */
-  def asynchChannel(implicit e: ExecutorService): Channel[Task, I, O] =
-    channel.lift(asynchTask)
+  def asyncChannel(implicit e: Executor): Channel[Task, I, O] =
+    channel.lift(asyncTask)
 
   /**
    * A scalaz.concurrent.Task that runs asynchronously
@@ -131,7 +129,7 @@ trait Writer[I,O] { self =>
    * @param i
    * @return
    */
-  def asynchTask(i: I)(implicit e: ExecutorService): Task[O] = Task.suspend({
+  def asyncTask(i: I)(implicit e: Executor): Task[O] = Task.suspend({
     Task.async { (cb: (Throwable \/ O) => Unit) =>
       Futures.addCallback(eval(i), new FutureCallback[O]() {
         def onSuccess(result: O) = {

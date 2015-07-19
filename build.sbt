@@ -9,6 +9,7 @@ scalaVersion := "2.11.7"
 crossScalaVersions := Seq("2.9.3", "2.10.5", "2.11.7")
 
 scalacOptions ++= Seq(
+  "-language:implicitConversions",
   "-deprecation",
   "-encoding", "UTF-8", // yes, this is 2 args
   "-feature",

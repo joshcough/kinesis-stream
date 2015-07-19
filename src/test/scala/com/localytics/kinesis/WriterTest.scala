@@ -11,7 +11,7 @@ class WriterTest extends FlatSpec with MockitoSugar with Matchers {
   implicit val executorService = Executors.newSingleThreadExecutor()
 
   def writer = new Writer[String, List[Char]] { self =>
-    def eval(s:String) = executorChannel(s)(_.toList)
+    def eval(s:String) = executorChannel(s, executorService)(_.toList)
     def onFailure(t: Throwable): Unit = { /* intentionally do nothing */ }
     def onSuccess(res: List[Char]): Unit = { /* intentionally do nothing */ }
   }
@@ -20,7 +20,7 @@ class WriterTest extends FlatSpec with MockitoSugar with Matchers {
 
   it should "should write records normally, asynchronously" in {
     val hello = "Hello, world.".split(' ').toList
-    val l = writer.asynchProcess(hello).runLog.run
+    val l = writer.asyncProcess(hello).runLog.run
     l.size should be(2)
     l should be(Seq(
       List('H', 'e', 'l', 'l', 'o', ','),
@@ -29,6 +29,6 @@ class WriterTest extends FlatSpec with MockitoSugar with Matchers {
   }
 
   it should "gracefully handle writing empty logs" in {
-    writer.asynchProcess(List()).runLog.run should be(Seq())
+    writer.asyncProcess(List()).runLog.run should be(Seq())
   }
 }
