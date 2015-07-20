@@ -111,8 +111,7 @@ object DeepDive {
    * The partition key determines which shard your record
    * gets written to. We called it while creating the Writer
    *
-   * I don't recommend this particular strategy,
-   * but it sure is fun!
+   * I don't recommend this particular strategy, but it sure is fun!
    */
   def partitionKey(s: String): String = s + "tubular"
 }
