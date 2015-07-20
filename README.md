@@ -41,8 +41,6 @@ object GettingStartedFast {
 ### Deep Dive
 
 Here is a larger example that breaks things down a little more.
-With the exception of some minor scaffolding, al this code compiles.
-The complete code can find in src/main/scala/com/localytics/kinesis/Example.scala
 
 ```scala
 /**
