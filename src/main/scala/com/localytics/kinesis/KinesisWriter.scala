@@ -1,7 +1,7 @@
 package com.localytics.kinesis
 
 import java.nio.ByteBuffer
-import java.util.concurrent.Executor
+import java.util.concurrent.ExecutorService
 
 import com.amazonaws.kinesis.producer.{KinesisProducer, UserRecordResult}
 import com.google.common.util.concurrent.{MoreExecutors, ListenableFuture}
@@ -46,16 +46,25 @@ object KinesisWriter {
    *  directly on the current thread. If you need something else,
    *  simple have another implicit Executor in scope
    */
-  implicit val defaultExecutor: Executor = MoreExecutors.directExecutor()
+  implicit val defaultExecutor: ExecutorService = MoreExecutors.newDirectExecutorService()
 
+  /**
+   * Create a writer with no-ops for both callbacks.
+   * @param k KinesisProducer
+   * @param stream The Kinesis stream name
+   * @param partitioner A function that uses the input data to choose a shard.
+   * @param mkInput A function to turn the input data into bytes.
+   * @tparam A The generic type of the input data.
+   * @return A KinesisWriter for the input data.
+   */
   def noopWriter[A](k: KinesisProducer,
                  stream: String,
-                 shard: A => String)
+                 partitioner: A => String)
                 (mkInput: A => Array[Byte]): KinesisWriter[A] = {
     new KinesisWriter[A] {
       val kinesisProducer: KinesisProducer = k
       def toInputRecord(a: A) =
-        KinesisInputRecord(stream, shard(a), ByteBuffer.wrap(mkInput(a)))
+        KinesisInputRecord(stream, partitioner(a), ByteBuffer.wrap(mkInput(a)))
       def onFailure(t: Throwable): Unit = {}
       def onSuccess(res: UserRecordResult): Unit = {}
     }
@@ -91,9 +100,10 @@ object KinesisInputRecord {
     k.copy(payload = ByteBuffer.wrap(k.payload))
 
   // functor instance
-  implicit val KinesisInputRecordFunctor = new Functor[KinesisInputRecord] {
-    def map[A, B](k: KinesisInputRecord[A])(f: A => B): KinesisInputRecord[B] =
-      new KinesisInputRecord[B](k.stream, k.partitionKey, f(k.payload))
+  implicit val KinesisInputRecordFunctor: Functor[KinesisInputRecord] =
+    new Functor[KinesisInputRecord] {
+      def map[A, B](k: KinesisInputRecord[A])(f: A => B): KinesisInputRecord[B] =
+        new KinesisInputRecord[B](k.stream, k.partitionKey, f(k.payload))
   }
 }
 

@@ -25,7 +25,7 @@ class KinesisWriterTest extends FlatSpec with MockitoSugar with Matchers {
     val k = mock[KinesisProducer]
     val w = writer(k)
     val hello = "Hello, world.".split(' ').toList
-    val l = w.asyncProcess(hello).runLog.run
+    val l = w.process(hello).runLog.run
     l.size should be(2)
     l should be(Seq(
       List('H', 'e', 'l', 'l', 'o', ','),
@@ -36,6 +36,6 @@ class KinesisWriterTest extends FlatSpec with MockitoSugar with Matchers {
   it should "gracefully handle writing empty logs" in {
     val k = mock[KinesisProducer]
     val w = writer(k)
-    w.asyncProcess(List()).runLog.run should be(Seq())
+    w.process(List()).runLog.run should be(Seq())
   }
 }

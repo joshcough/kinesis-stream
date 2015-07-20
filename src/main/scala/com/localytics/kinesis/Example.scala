@@ -21,7 +21,7 @@ object log {
 object GettingStarted {
   val kp = new KinesisProducer()
   val writer = KinesisWriter.noopWriter[String](kp, "my-stream", s => s)(_.getBytes)
-  Writer.writeAsync(List("Hello", ", ", "World", "!!!"), writer)(MoreExecutors.directExecutor())
+  writer.write(List("Hello", ", ", "World", "!!!"))(MoreExecutors.directExecutor())
 }
 
 object BetterExample {
@@ -38,54 +38,57 @@ object BetterExample {
   implicit val e: Executor = MoreExecutors.directExecutor()
 
   // write a bunch of Strings to kinesis.
-  Writer.writeAsync(List("Hello", ", ", "World", "!!!"), kw)
+  kw.write(List("Hello", ", ", "World", "!!!"))
 }
 
 object DeepDive {
 
-  // create a Kinesis writer
-  val kw = new KinesisWriter[String] {
+  def deepDive(): IndexedSeq[UserRecordResult] = {
 
-    // you need a KPL producer, obvs.
-    val kinesisProducer: KinesisProducer = new KinesisProducer()
+    // create a Kinesis writer
+    val kw = new KinesisWriter[String] {
 
-    // you have to convert your data into what KPL expects
-    def toInputRecord(s: String) = KinesisInputRecord(
-      "my-stream", getShard(s), ByteBuffer.wrap(s.getBytes)
-    )
+      // you need a KPL producer, obvs.
+      val kinesisProducer: KinesisProducer = new KinesisProducer()
 
-    // handle errors writing to the KPL (Bring Your Own Logger)
-    def onFailure(t: Throwable): Unit = log.OMGOMG_!(t.getMessage)
+      // you have to convert your data into what KPL expects
+      def toInputRecord(s: String) = KinesisInputRecord(
+        "my-stream", getShard(s), ByteBuffer.wrap(s.getBytes)
+      )
 
-    // do whatever you feel like doing when a write is successful
-    def onSuccess(res: UserRecordResult): Unit = log.AWESOME(res.toString)
+      // handle errors writing to the KPL (Bring Your Own Logger)
+      def onFailure(t: Throwable): Unit = log.OMGOMG_!(t.getMessage)
 
-    // Not a good sharding strategy, but it sure is fun.
-    def getShard(s: String): String = s + "tubular"
+      // do whatever you feel like doing when a write is successful
+      def onSuccess(res: UserRecordResult): Unit = log.AWESOME(res.toString)
+
+      // Not a good sharding strategy, but it sure is fun.
+      def getShard(s: String): String = s + "tubular"
+    }
+
+    // Executor needed to handle success and failure callbacks.
+    implicit val e: Executor = MoreExecutors.directExecutor()
+
+    // get a scalaz-stream Channel that accepts Strings
+    // and outputs UserRecordResult returned from the KPL
+    val channel: Channel[Task, String, UserRecordResult] =
+      kw.channel
+
+    // prepare some data to put into kinesis
+    val data = List("Hello", ", ", "World", "!!!")
+
+    // create a process by feeding all the data to the channel
+    // the result is a process that simply emits the results.
+    val process: Process[Task, UserRecordResult] =
+      Process(data: _*).tee(channel)(tee.zipApply).eval
+
+    // run the process (and the resulting task)
+    // to get out an IndexedSeq[UserResultRecord]
+    val results = process.runLog.run
+
+    // at this point you can get all sorts of info from the
+    // UserResultRecords, such as shard id, sequence number, and more
+    // but for now, we'll just return them
+    results
   }
-
-  // Executor needed to handle success and failure callbacks.
-  implicit val e: Executor = MoreExecutors.directExecutor()
-
-  // get a scalaz-stream Channel that accepts Strings
-  // and outputs UserRecordResult returned from the KPL
-  val channel: Channel[Task, String, UserRecordResult] =
-    kw.asyncChannel
-
-  // prepare some data to put into kinesis
-  val data = List("Hello", ", ", "World", "!!!")
-
-  // create a process by feeding all the data to the channel
-  // the result is a process that simply emits the results.
-  val process: Process[Task, UserRecordResult] =
-    Process(data: _*).tee(channel)(tee.zipApply).eval
-
-  // run the process (and the resulting task)
-  // to get out an IndexedSeq[UserResultRecord]
-  val results = process.runLog.run
-
-  // at this point you can get all sorts of info from the
-  // UserResultRecords, such as shard id, sequence number, and more
-  // but for now, we'll just return them
-  // results
 }

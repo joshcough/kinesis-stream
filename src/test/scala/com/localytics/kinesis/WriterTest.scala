@@ -20,7 +20,7 @@ class WriterTest extends FlatSpec with MockitoSugar with Matchers {
 
   it should "should write records normally, asynchronously" in {
     val hello = "Hello, world.".split(' ').toList
-    val l = writer.asyncProcess(hello).runLog.run
+    val l = writer.process(hello).runLog.run
     l.size should be(2)
     l should be(Seq(
       List('H', 'e', 'l', 'l', 'o', ','),
@@ -29,6 +29,6 @@ class WriterTest extends FlatSpec with MockitoSugar with Matchers {
   }
 
   it should "gracefully handle writing empty logs" in {
-    writer.asyncProcess(List()).runLog.run should be(Seq())
+    writer.process(List()).runLog.run should be(Seq())
   }
 }
