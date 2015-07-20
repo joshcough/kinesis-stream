@@ -24,8 +24,7 @@ object WriterProps extends Properties("Writer") {
     val chars  = strings.map(_.toList)
     val writer = idWriter.contramap[List[Char]](_.mkString)
     val actual: Seq[String] = writer.collect(strings.map(_.toList))
-    val expected = strings.map(_.toList)
-    actual == expected
+    actual == strings
   }
 
 }

@@ -155,8 +155,8 @@ trait Writer[-I,O] { self =>
     }
   })
 
-//  def contramap[I2](f: I2 => I): Writer[I2, O] =
-//    Writer.WriterContravariant.contramap(self)(f)
+  def contramap[I2](f: I2 => I): Writer[I2, O] =
+    Writer.WriterContravariant.contramap(self)(f)
 
 //  Notes from Spiewak
 //  def through[F2[x]>:F[x],O2](f: Channel[F2,O,O2], limit: Int):
