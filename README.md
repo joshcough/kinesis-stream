@@ -5,34 +5,32 @@ kinesis-stream is a scalaz-stream API for Amazon Kinesis.
 kinesis-stream currently supports the KPL, but hopefully
 will soon support the KCL, and maybe the original AWS API as well.
 
-The following simple example writes Strings to Kinesis:
+## Examples
+
+All the examples that follow can be found in `src/main/scala/com/localytics/kinesis/Example.scala`
+
+### Getting Started with KPL Streaming.
+
+First we'll get started with a simple example with no comments,
+and then we'll review it in detail, and dive even deeper.
+
+This is all you need to get started:
 
 ```scala
-object GettingStarted {
-  val kp = new KinesisProducer()
-  val writer = KinesisWriter.noopWriter[String](kp, "my-stream", s => s)(_.getBytes)
-  Writer.writeAsync(List("Hello", ", ", "World", "!!!"), writer)
-}
-```
-
-Here is a slightly more involved example that starts
-hinting at some of the API. It also just writes out Strings.
-
-```scala
-object BetterExample {
-  val kw = new KinesisWriter[String] {
-    val kinesisProducer: KinesisProducer = new KinesisProducer()
-    def toInputRecord(s: String) = KinesisInputRecord(
-      "my-stream", "shard-" + s, ByteBuffer.wrap(s.getBytes)
-    )
-    def onFailure(t: Throwable): Unit = (/* handle error */)
-    def onSuccess(res: UserRecordResult): Unit = (/* celebrate */)
-    def getShard(s: String): String = s + "tubular"
+object GettingStartedFast {
+  def gettingStarted : Channel[Task, String, UserRecordResult] = {
+    val kw = new KinesisWriter[String] {
+      val kinesisProducer: KinesisProducer = new KinesisProducer()
+      def toInputRecord(s: String) = KinesisInputRecord(
+        "my-stream", "shard-" + s, ByteBuffer.wrap(s.getBytes)
+      )
+      def onFailure(t: Throwable): Unit = ( /* handle error */ )
+      def onSuccess(res: UserRecordResult): Unit = ( /* celebrate */ )
+      def getShard(s: String): String = s + "tubular"
+    }
+    kw.write(List("Hello", ", ", "World", "!!!"))
+    kw.channel : Channel[Task, String, UserRecordResult]
   }
-
-  implicit val e: Executor = MoreExecutors.directExecutor()
-
-  Writer.writeAsync(List("Hello", ", ", "World", "!!!"), kw)
 }
 ```
 
@@ -41,52 +39,87 @@ Other than the logger, this code compiles. You can find it in
 src/main/scala/com/localytics/kinesis/Example.scala
 
 ```scala
+/**
+ * This example will return a Channel that can
+ *   - Write Strings to Kinesis
+ *   - Emit KPL UserRecordResults
+ **/
 object DeepDive {
 
-  // create a Kinesis writer
-  val kw = new KinesisWriter[String] {
+  def deepDive : Channel[Task, String, UserRecordResult] = {
 
-    // you need a KPL producer, obvs.
-    val kinesisProducer: KinesisProducer = new KinesisProducer()
+    // Create a KinesisWriter that writes Strings to Kinesis
+    // You can write anything that you can Serialize to bytes
+    val kw = new KinesisWriter[String] {
 
-    // you have to convert your data into what KPL expects
-    def toInputRecord(s: String) = KinesisInputRecord(
-      "my-stream", getShard(s), ByteBuffer.wrap(s.getBytes)
-    )
+      // the writer needs an actual AWS KinesisProducer object
+      val kinesisProducer = new KinesisProducer()
 
-    // handle errors writing to the KPL (Bring Your Own Logger)
-    def onFailure(t: Throwable): Unit = log.OMGOMG_!(t.getMessage)
+      /**
+       * Kinesis needs to know 3 things:
+       *   - The stream to write the record to
+       *   - The partition key (determines the shard written to)
+       *   - And some bytes that actually contain the payload.
+       *
+       * This info is captured in a KinesisInputRecord
+       * which toInputRecord allows you to turn your input into.
+       */
+      def toInputRecord(s: String) = KinesisInputRecord(
+        "my-stream", "shard-" + s, ByteBuffer.wrap(s.getBytes)
+      )
 
-    // do whatever you feel like doing when a write is successful
-    def onSuccess(res: UserRecordResult): Unit = log.AWESOME(res.toString)
+      // Handle errors in anyway you please.
+      def onFailure(t: Throwable): Unit =
+        log.OMGOMG_!(t.getMessage)
 
-    // Not a good sharding strategy, but it sure is fun.
-    def getShard(s: String): String = s + "tubular"
+      // Equally, handle success in any way you please
+      def onSuccess(res: UserRecordResult): Unit =
+        log.AWESOME(res.toString)
+    }
+
+    // Now that we have a KinesisWriter, we can put it to use.
+
+    // Get a scalaz-stream Channel that accepts Strings
+    // and outputs UserRecordResult returned from the KPL
+    val channel: Channel[Task, String, UserRecordResult] =
+      kw.channel
+
+    // Prepare some data to put into kinesis
+    val data = List("Hello", ", ", "World", "!!!")
+
+    // Create a process by feeding all the data to the channel.
+    // The result is a process that simply emits the results.
+    val process_ : Process[Task, UserRecordResult] =
+      Process(data: _*).tee(channel)(tee.zipApply).eval
+
+    // Or you can just get the process from the Writer :)
+    val process: Process[Task, UserRecordResult] =
+      kw.process(data)
+
+    // Now, run the process and obtain all the responses
+    // from Kinesis
+    val results: IndexedSeq[UserRecordResult] =
+      process.runLog.run
+
+    // All that could have been accomplished more simply:
+    kw.write(List("Hello", ", ", "World", "!!!"))
+
+    // But, it's having the Channel and Process that are important.
+    // At this point you can get all sorts of info from the
+    // UserResultRecords, such as shard id, sequence number, and more
+
+    // but for now, we'll just return the channel
+    channel
   }
 
-  // Executor needed to handle success and failure callbacks.
-  implicit val e: Executor = MoreExecutors.directExecutor()
-
-  // get a scalaz-stream Channel that accepts Strings
-  // and outputs UserRecordResult returned from the KPL
-  val channel: Channel[Task, String, UserRecordResult] =
-    kw.asyncChannel
-
-  // prepare some data to put into kinesis
-  val data = List("Hello", ", ", "World", "!!!")
-
-  // create a process by feeding all the data to the channel
-  // the result is a process that simply emits the results.
-  val process: Process[Task, UserRecordResult] =
-    Process(data: _*).tee(channel)(tee.zipApply).eval
-
-  // run the process (and the resulting task)
-  // to get out an IndexedSeq[UserResultRecord]
-  val results = process.runLog.run
-
-  // at this point you can get all sorts of info from the
-  // UserResultRecords, such as shard id, sequence number, and more
-  // but for now, we'll just return them
-  results
+  /**
+   * The partition key determines which shard your record
+   * gets written to. We called it while creating the Writer
+   *
+   * I don't recommend this particular strategy,
+   * but it sure is fun!
+   */
+  def partitionKey(s: String): String = s + "tubular"
 }
+
 ```
