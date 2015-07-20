@@ -21,7 +21,7 @@ class KinesisWriterTest extends FlatSpec with MockitoSugar with Matchers {
 
   behavior of "A Writer"
 
-  it should "should write records normally, asynchronously" in {
+/*  it should "should write records normally, asynchronously" in {
     val k = mock[KinesisProducer]
     val w = writer(k)
     val hello = "Hello, world.".split(' ').toList
@@ -31,7 +31,7 @@ class KinesisWriterTest extends FlatSpec with MockitoSugar with Matchers {
       List('H', 'e', 'l', 'l', 'o', ','),
       List('w', 'o', 'r', 'l', 'd', '.')
     ))
-  }
+  }*/
 
   it should "gracefully handle writing empty logs" in {
     val k = mock[KinesisProducer]

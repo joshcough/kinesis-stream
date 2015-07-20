@@ -6,7 +6,7 @@ organization := "com.localytics"
 
 scalaVersion := "2.11.7"
 
-crossScalaVersions := Seq("2.9.3", "2.10.5", "2.11.7")
+//crossScalaVersions := Seq("2.9.3", "2.10.5", "2.11.7")
 
 scalacOptions ++= Seq(
   "-language:implicitConversions"
@@ -47,6 +47,7 @@ libraryDependencies ++= Seq(
  ,"org.scalacheck"    %% "scalacheck"              % "1.12.4"  % "test"
  ,"org.mockito"        % "mockito-all"             % "1.9.5"   % "test"
  ,"org.scalatest"     %% "scalatest"               % "2.2.4"   % "test"
+ ,"org.pegdown"        % "pegdown"                 % "1.5.0"   % "test"
 )
 
 addCompilerPlugin("org.spire-math" % "kind-projector" % "0.6.2" cross CrossVersion.binary)
