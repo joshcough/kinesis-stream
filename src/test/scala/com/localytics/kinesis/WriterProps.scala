@@ -6,6 +6,7 @@ import com.google.common.util.concurrent.MoreExecutors
 import org.scalacheck.Properties
 import org.scalacheck.Prop._
 import Writer._
+import scalaz.\/
 import scalaz.syntax.equal._
 import scalaz.syntax.contravariant._
 
@@ -23,7 +24,7 @@ object WriterProps extends Properties("Writer") {
   property("identity async") = forAll { (strings: List[String]) =>
     val chars  = strings.map(_.toList)
     val writer = idWriter.contramap[List[Char]](_.mkString)
-    val actual: Seq[String] = writer.collect(strings.map(_.toList))
+    val actual: Seq[Throwable \/ String] = writer.collect(strings.map(_.toList))
     actual == strings
   }
 

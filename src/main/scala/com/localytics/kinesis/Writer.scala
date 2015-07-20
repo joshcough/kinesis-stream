@@ -22,8 +22,8 @@ object Writer {
    */
   def idWriter[A](implicit e: ExecutorService) = new Writer[A, A] { self =>
     def eval(a:A) = executorChannel(a, e)(identity)
-    def onFailure(t: Throwable): Unit = { /* intentionally do nothing */ }
-    def onSuccess(res: A): Unit = { /* intentionally do nothing */ }
+//    def onFailure(t: Throwable): Unit = { /* intentionally do nothing */ }
+//    def onSuccess(res: A): Unit = { /* intentionally do nothing */ }
   }
 
   // Functor instance for ListenableFuture
@@ -46,8 +46,8 @@ object Writer {
       def contramap[A, B](r: Writer[A, O])(f: B => A): Writer[B, O] =
         new Writer[B, O] {
           def eval(b: B): ListenableFuture[O] = r.eval(f(b))
-          def onFailure(t: Throwable): Unit = r.onFailure(t)
-          def onSuccess(result: O): Unit = r.onSuccess(result)
+//          def onFailure(t: Throwable): Unit = r.onFailure(t)
+//          def onSuccess(result: O): Unit = r.onSuccess(result)
         }
     }
 
@@ -87,25 +87,13 @@ trait Writer[-I,O] { self =>
   def eval(i:I): ListenableFuture[O]
 
   /**
-   * If the evaluation fails, take care of it here.
-   * @param t
-   */
-  def onFailure(t: Throwable): Unit
-
-  /**
-   * If the evaluation succeeds, do any finalization work.
-   * @param result
-   */
-  def onSuccess(result: O): Unit
-
-  /**
    * Run the input through the writers process,
    * collecting the results.
    * @param is
    * @param e
    * @return
    */
-  def collect(is: Seq[I])(implicit e: Executor): Seq[O] = process(is).runLog.run
+  def collect(is: Seq[I])(implicit e: Executor): Seq[Throwable \/ O] = process(is).runLog.run
 
   /**
    * Run the input through the writers asyncProcess,
@@ -122,7 +110,7 @@ trait Writer[-I,O] { self =>
    * @param is
    * @return
    */
-  def process(is: Seq[I])(implicit e: Executor): Process[Task, O] =
+  def process(is: Seq[I])(implicit e: Executor): Process[Task, Throwable \/ O] =
     Writer.mkProcess(is, channel)
 
   /**
@@ -130,7 +118,7 @@ trait Writer[-I,O] { self =>
    * The tasks don't wait for operations to complete.
    * @return
    */
-  def channel(implicit e: Executor): Channel[Task, I, O] =
+  def channel(implicit e: Executor): Channel[Task, I, Throwable \/ O] =
     scalaz.stream.channel.lift(asyncTask)
 
   /**
@@ -140,17 +128,11 @@ trait Writer[-I,O] { self =>
    * @param i
    * @return
    */
-  def asyncTask(i: I)(implicit e: Executor): Task[O] = Task.suspend({
-    Task.async { (cb: (Throwable \/ O) => Unit) =>
+  def asyncTask(i: I)(implicit e: Executor): Task[Throwable \/ O] = Task.suspend({
+    Task.async { (cb: (Throwable \/ (Throwable \/ O)) => Unit) =>
       Futures.addCallback(eval(i), new FutureCallback[O]() {
-        def onSuccess(result: O) = {
-          cb(result.right)
-          self.onSuccess(result)
-        }
-        def onFailure(t: Throwable) = {
-          cb(t.left)
-          self.onFailure(t)
-        }
+        def onSuccess(result: O) = cb(result.right.right)
+        def onFailure(t: Throwable) = cb(t.left)
       }, e)
     }
   })

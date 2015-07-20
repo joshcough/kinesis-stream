@@ -15,8 +15,6 @@ class KinesisWriterTest extends FlatSpec with MockitoSugar with Matchers {
   def writer(k:KinesisProducer) = new KinesisWriter[String] { self =>
     val kinesisProducer = k
     def toInputRecord(s:String) = KinesisInputRecord(s,s,ByteBuffer.wrap(s.getBytes))
-    def onFailure(t: Throwable): Unit = { /* intentionally do nothing */ }
-    def onSuccess(res: UserRecordResult): Unit = { /* intentionally do nothing */ }
   }
 
   behavior of "A Writer"

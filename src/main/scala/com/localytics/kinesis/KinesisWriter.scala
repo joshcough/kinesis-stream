@@ -23,8 +23,6 @@ object KinesisWriter {
         val kinesisProducer = k.kinesisProducer
         def toInputRecord(b: B): KinesisInputRecord[ByteBuffer] =
           k.toInputRecord(f(b))
-        def onFailure(t: Throwable): Unit = k.onFailure(t)
-        def onSuccess(result: UserRecordResult): Unit = k.onSuccess(result)
       }
   }
 
@@ -65,8 +63,6 @@ object KinesisWriter {
       val kinesisProducer: KinesisProducer = k
       def toInputRecord(a: A) =
         KinesisInputRecord(stream, partitioner(a), ByteBuffer.wrap(mkInput(a)))
-      def onFailure(t: Throwable): Unit = {}
-      def onSuccess(res: UserRecordResult): Unit = {}
     }
   }
 }

@@ -12,8 +12,6 @@ class WriterTest extends FlatSpec with MockitoSugar with Matchers {
 
   def writer = new Writer[String, List[Char]] { self =>
     def eval(s:String) = executorChannel(s, executorService)(_.toList)
-    def onFailure(t: Throwable): Unit = { /* intentionally do nothing */ }
-    def onSuccess(res: List[Char]): Unit = { /* intentionally do nothing */ }
   }
 
   behavior of "A Writer"

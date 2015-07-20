@@ -22,19 +22,17 @@ This is all you need to get started:
 
 ```scala
 object GettingStartedFast {
-  def gettingStarted : Channel[Task, String, UserRecordResult] = {
+  def gettingStarted : Channel[Task, String, Throwable \/ UserRecordResult] = {
     val kw = new KinesisWriter[String] {
       val kinesisProducer: KinesisProducer = new KinesisProducer()
       def toInputRecord(s: String) = KinesisInputRecord(
-        "my-stream", "shard-" + s, ByteBuffer.wrap(s.getBytes)
+        "my-stream", partitionKey(s), ByteBuffer.wrap(s.getBytes)
       )
-      def onFailure(t: Throwable): Unit = ( /* handle error */ )
-      def onSuccess(res: UserRecordResult): Unit = ( /* celebrate */ )
-      def getShard(s: String): String = s + "tubular"
     }
     kw.write(List("Hello", ", ", "World", "!!!"))
-    kw.channel : Channel[Task, String, UserRecordResult]
+    kw.channel : Channel[Task, String, Throwable \/ UserRecordResult]
   }
+  def partitionKey(s: String): String = s + "tubular"
 }
 ```
 
@@ -50,12 +48,11 @@ Here is a larger example that breaks things down a little more.
  **/
 object DeepDive {
 
-  def deepDive : Channel[Task, String, UserRecordResult] = {
+  def deepDive : Channel[Task, String, Throwable \/ UserRecordResult] = {
 
     // Create a KinesisWriter that writes Strings to Kinesis
     // You can write anything that you can Serialize to bytes
     val kw = new KinesisWriter[String] {
-
       // The writer needs an actual AWS KinesisProducer object
       val kinesisProducer = new KinesisProducer()
 
@@ -71,33 +68,27 @@ object DeepDive {
       def toInputRecord(s: String) = KinesisInputRecord(
         "my-stream", "shard-" + s, ByteBuffer.wrap(s.getBytes)
       )
-
-      // Handle errors in anyway you please.
-      def onFailure(t: Throwable): Unit = log.OMGOMG_!(t.getMessage)
-
-      // Equally, handle success in any way you please
-      def onSuccess(res: UserRecordResult): Unit = log.AWESOME(res.toString)
     }
 
     /** Now that we have a KinesisWriter, we can put it to use. **/
 
     // Get a scalaz-stream Channel that accepts Strings
     // and outputs UserRecordResult returned from the KPL
-    val channel: Channel[Task, String, UserRecordResult] = kw.channel
+    val channel = kw.channel
 
     // Prepare some data to put into kinesis
     val data = List("Hello", ", ", "World", "!!!")
 
     // Create a process by feeding all the data to the channel.
     // The result is a process that simply emits the results.
-    val process_ : Process[Task, UserRecordResult] =
+    val process_ : Process[Task, Throwable \/ UserRecordResult] =
       Process(data: _*).tee(channel)(tee.zipApply).eval
 
     // Or you can just get the process from the Writer :)
-    val process: Process[Task, UserRecordResult] = kw.process(data)
+    val process: Process[Task, Throwable \/ UserRecordResult] = kw.process(data)
 
     // Now, run the process and obtain all the responses from Kinesis
-    val results: IndexedSeq[UserRecordResult] = process.runLog.run
+    val results: IndexedSeq[Throwable \/ UserRecordResult] = process.runLog.run
 
     // All that could have been accomplished more simply:
     kw.write(List("Hello", ", ", "World", "!!!"))
