@@ -34,6 +34,8 @@ object GettingStartedFast {
 }
 ```
 
+### Deep Dive
+
 Here is a larger example that breaks things down a little more.
 Other than the logger, this code compiles. You can find it in
 src/main/scala/com/localytics/kinesis/Example.scala
@@ -52,7 +54,7 @@ object DeepDive {
     // You can write anything that you can Serialize to bytes
     val kw = new KinesisWriter[String] {
 
-      // the writer needs an actual AWS KinesisProducer object
+      // The writer needs an actual AWS KinesisProducer object
       val kinesisProducer = new KinesisProducer()
 
       /**
@@ -69,20 +71,17 @@ object DeepDive {
       )
 
       // Handle errors in anyway you please.
-      def onFailure(t: Throwable): Unit =
-        log.OMGOMG_!(t.getMessage)
+      def onFailure(t: Throwable): Unit = log.OMGOMG_!(t.getMessage)
 
       // Equally, handle success in any way you please
-      def onSuccess(res: UserRecordResult): Unit =
-        log.AWESOME(res.toString)
+      def onSuccess(res: UserRecordResult): Unit = log.AWESOME(res.toString)
     }
 
-    // Now that we have a KinesisWriter, we can put it to use.
+    /** Now that we have a KinesisWriter, we can put it to use. **/
 
     // Get a scalaz-stream Channel that accepts Strings
     // and outputs UserRecordResult returned from the KPL
-    val channel: Channel[Task, String, UserRecordResult] =
-      kw.channel
+    val channel: Channel[Task, String, UserRecordResult] = kw.channel
 
     // Prepare some data to put into kinesis
     val data = List("Hello", ", ", "World", "!!!")
@@ -93,13 +92,10 @@ object DeepDive {
       Process(data: _*).tee(channel)(tee.zipApply).eval
 
     // Or you can just get the process from the Writer :)
-    val process: Process[Task, UserRecordResult] =
-      kw.process(data)
+    val process: Process[Task, UserRecordResult] = kw.process(data)
 
-    // Now, run the process and obtain all the responses
-    // from Kinesis
-    val results: IndexedSeq[UserRecordResult] =
-      process.runLog.run
+    // Now, run the process and obtain all the responses from Kinesis
+    val results: IndexedSeq[UserRecordResult] = process.runLog.run
 
     // All that could have been accomplished more simply:
     kw.write(List("Hello", ", ", "World", "!!!"))
@@ -108,7 +104,7 @@ object DeepDive {
     // At this point you can get all sorts of info from the
     // UserResultRecords, such as shard id, sequence number, and more
 
-    // but for now, we'll just return the channel
+    // But for now, we'll just return the channel
     channel
   }
 
@@ -121,5 +117,4 @@ object DeepDive {
    */
   def partitionKey(s: String): String = s + "tubular"
 }
-
 ```
