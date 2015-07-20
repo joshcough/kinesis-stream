@@ -63,7 +63,7 @@ object DeepDive {
        *   - And some bytes that actually contain the payload.
        *
        * This info is captured in a KinesisInputRecord
-       * which toInputRecord allows you to turn your input into.
+       * which you create in toInputRecord using your input.
        */
       def toInputRecord(s: String) = KinesisInputRecord(
         "my-stream", "shard-" + s, ByteBuffer.wrap(s.getBytes)

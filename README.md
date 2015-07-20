@@ -37,8 +37,8 @@ object GettingStartedFast {
 ### Deep Dive
 
 Here is a larger example that breaks things down a little more.
-Other than the logger, this code compiles. You can find it in
-src/main/scala/com/localytics/kinesis/Example.scala
+With the exception of some minor scaffolding, al this code compiles.
+The complete code can find in src/main/scala/com/localytics/kinesis/Example.scala
 
 ```scala
 /**
@@ -64,7 +64,7 @@ object DeepDive {
        *   - And some bytes that actually contain the payload.
        *
        * This info is captured in a KinesisInputRecord
-       * which toInputRecord allows you to turn your input into.
+       * which you create in toInputRecord using your input.
        */
       def toInputRecord(s: String) = KinesisInputRecord(
         "my-stream", "shard-" + s, ByteBuffer.wrap(s.getBytes)
