@@ -28,11 +28,13 @@ parallelExecution := false
 
 parallelExecution in Test := false
 
+/*
 testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest,
   "-oD"
  ,"-u", "target/test-reports"
  ,"-h", "target/test-reports"
 )
+*/
 
 resolvers ++= Seq(
   "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"
