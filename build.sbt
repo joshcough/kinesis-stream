@@ -44,8 +44,8 @@ resolvers ++= Seq(
 
 libraryDependencies ++= Seq(
   "org.scalaz"        %% "scalaz-core"             % "7.1.3"
- ,"com.amazonaws"      % "amazon-kinesis-producer" % "0.9.0"
  ,"org.scalaz.stream" %% "scalaz-stream"           % "0.7.1a"
+ ,"com.amazonaws"      % "amazon-kinesis-producer" % "0.9.0"
  ,"org.scalacheck"    %% "scalacheck"              % "1.12.4"  % "test"
  ,"org.mockito"        % "mockito-all"             % "1.9.5"   % "test"
  ,"org.scalatest"     %% "scalatest"               % "2.2.4"   % "test"

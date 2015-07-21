@@ -17,7 +17,7 @@ class KinesisWriterTest extends FlatSpec with MockitoSugar with Matchers {
     def toInputRecord(s:String) = KinesisInputRecord(s,s,ByteBuffer.wrap(s.getBytes))
   }
 
-  behavior of "A Writer"
+  behavior of "A Kinesis Writer"
 
 /*  it should "should write records normally, asynchronously" in {
     val k = mock[KinesisProducer]

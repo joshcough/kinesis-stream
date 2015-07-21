@@ -6,9 +6,7 @@ import com.google.common.util.concurrent.MoreExecutors
 import org.scalacheck.Properties
 import org.scalacheck.Prop._
 import Writer._
-import scalaz.\/
-import scalaz.syntax.equal._
-import scalaz.syntax.contravariant._
+import scalaz.{\/-, \/}
 
 /**
  * Created by jcough on 7/19/15.
@@ -17,15 +15,18 @@ object WriterProps extends Properties("Writer") {
 
   implicit val e: ExecutorService = MoreExecutors.newDirectExecutorService()
 
-  property("identity sync") = forAll { (strings: List[String]) =>
-    idWriter.collect(strings) == strings
+  property("identity writer") = forAll { (strings: List[String]) =>
+    val actual = idWriter.collect(strings).filter(_.isRight)
+    val result = strings.map(\/-(_))
+    actual == result
+    idWriter.collect(strings).filter(_.isRight) == strings.map(\/-(_))
   }
 
-  property("identity async") = forAll { (strings: List[String]) =>
+  property("contramap writer") = forAll { (strings: List[String]) =>
     val chars  = strings.map(_.toList)
     val writer = idWriter.contramap[List[Char]](_.mkString)
     val actual: Seq[Throwable \/ String] = writer.collect(strings.map(_.toList))
-    actual == strings
+    actual == strings.map(\/-(_))
   }
 
 }

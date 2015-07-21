@@ -128,14 +128,13 @@ trait Writer[-I,O] { self =>
    * @param i
    * @return
    */
-  def asyncTask(i: I)(implicit e: Executor): Task[Throwable \/ O] = Task.suspend({
+  def asyncTask(i: I)(implicit e: Executor): Task[Throwable \/ O] =
     Task.async { (cb: (Throwable \/ (Throwable \/ O)) => Unit) =>
       Futures.addCallback(eval(i), new FutureCallback[O]() {
         def onSuccess(result: O) = cb(result.right.right)
         def onFailure(t: Throwable) = cb(t.left)
       }, e)
     }
-  })
 
   def contramap[I2](f: I2 => I): Writer[I2, O] =
     Writer.WriterContravariant.contramap(self)(f)
