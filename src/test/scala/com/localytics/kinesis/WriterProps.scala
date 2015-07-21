@@ -19,14 +19,13 @@ object WriterProps extends Properties("Writer") {
     val actual = idWriter.collect(strings).filter(_.isRight)
     val result = strings.map(\/-(_))
     actual == result
-    idWriter.collect(strings).filter(_.isRight) == strings.map(\/-(_))
   }
 
   property("contramap writer") = forAll { (strings: List[String]) =>
     val chars  = strings.map(_.toList)
     val writer = idWriter.contramap[List[Char]](_.mkString)
     val actual: Seq[Throwable \/ String] = writer.collect(strings.map(_.toList))
-    actual == strings.map(\/-(_))
+    val result = strings.map(\/-(_))
+    actual == result
   }
-
 }
